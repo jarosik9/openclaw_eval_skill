@@ -33,7 +33,7 @@ Run the bundled weather skill examples to verify the framework works before eval
 
 **Step 1: Clone and register the skill**
 ```bash
-git clone https://github.com/jarosik9/openclaw_eval_skill.git
+git clone https://github.com/jarosik9/skill-eval.git
 # Add the parent directory to skills.load.extraDirs in openclaw.json
 ```
 
