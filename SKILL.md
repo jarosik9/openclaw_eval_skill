@@ -1,6 +1,7 @@
 ---
 name: openclaw-eval-skill
 description: "OpenClaw Skill evaluation framework. Use when: evaluating any OpenClaw skill quality — testing description trigger rate, comparing with/without skill output quality (quality compare), or running LLM-as-judge scoring. Works with any skill type (CLI tools, conversational, API integrations). No claude CLI dependency — runs via sessions_spawn + sessions_history. Supports parallel evaluation (6-8 workers, 5-10x performance gain). Trigger words: evaluate skill, benchmark, trigger rate, quality compare, A/B compare, skill effectiveness, skill evaluation. NOT for: debugging a single conversation, general testing tasks unrelated to skill evaluation."
+metadata: { "openclaw": { "emoji": "🔬" } }
 ---
 
 # openclaw-eval-skill
@@ -45,6 +46,8 @@ The agent (you, in the main session) follows the workflows in `USAGE.md`:
 # sessions_spawn is not available in isolated subagent environments
 python scripts/run_orchestrator.py --evals ...
 ```
+
+> **Note on `run_orchestrator.py`**: This script is a legacy v1 runner. In v2, the agent handles `sessions_spawn` directly; Python scripts only do data analysis. Use `run_orchestrator.py` only via `execute_program` (which has `oc_tools`) or as a reference for the workflow — not as a standalone CLI.
 
 **→ See `USAGE.md` for the complete step-by-step agent-driven workflow.**
 

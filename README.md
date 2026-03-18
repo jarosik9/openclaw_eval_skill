@@ -1,68 +1,89 @@
-# openclaw-eval-skill
+# openclaw-eval-skill 🔬
 
-Evaluation framework for any OpenClaw skill. No claude CLI dependency — all agent execution runs through `sessions_spawn` + `sessions_history`. **Parallel evaluation supported: 5-10x performance gain.**
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Three evaluation dimensions**: Quality + Speed + Cost (pending). See `ARCHITECTURE.md`.
+Evaluation framework for any OpenClaw skill. Tests description trigger accuracy, output quality (with vs without skill), model performance comparison, and latency profiling.
 
----
-
-## Quick Start
-
-```bash
-cd <skill-root>
-
-# Run full evaluation (compare + trigger, parallel)
-python scripts/run_orchestrator.py \
-    --evals evals/example-quality.json \
-    --skill-path <YOUR-SKILL-PATH>/SKILL.md \
-    --mode both \
-    --output-dir workspace/my-skill/iteration-1 \
-    --workers 6
-```
-
-**Output** → `workspace/my-skill/iteration-1/`:
-- `compare_results_raw.json` — raw results (with/without skill session keys)
-- `eval-{id}-{name}/` — per-eval transcripts + metadata
-- `trigger_rate_results.json` — description trigger rate analysis
-
-**Performance**:
-| | Sequential | Parallel (6 workers) |
-|--|--|--|
-| 5 evals × compare + trigger | 120s | 20s |
-| **Speedup** | **baseline** | **6x faster** |
+**No `claude` CLI dependency** — all agent execution runs through `sessions_spawn` + `sessions_history`.
 
 ---
 
-## Architecture
-
-Two-layer design (v2):
+## How It Works (Two-Layer Architecture)
 
 ```
 Layer 1: Agent (main OpenClaw session)
-  ├─ Read evals.json
+  ├─ Reads evals.json
   ├─ sessions_spawn → subagents        ← agent does this directly
   ├─ sessions_history → extract data   ← agent does this directly
-  └─ Write files to raw/ directory
+  └─ Writes raw data to workspace/
 
 Layer 2: Python scripts (run via exec)
-  ├─ Read JSON/txt from raw/           ← pure data processing
+  ├─ Read JSON/txt from workspace/     ← pure data processing
   ├─ Compute statistics
   └─ Generate reports
 ```
 
-**Critical**: the Python scripts cannot call `sessions_spawn` themselves — they are data processors only. The agent in the main session drives the entire workflow.
+> **Critical**: Python scripts cannot call `sessions_spawn` themselves. The agent in the main session drives the entire workflow. See `USAGE.md`.
 
-See `USAGE.md` for the full agent-driven workflow.
+---
+
+## Quick Start: Validate Your Setup (5 minutes)
+
+Run the bundled weather skill examples to verify the framework works before evaluating your own skill:
+
+**Step 1: Clone and register the skill**
+```bash
+git clone https://github.com/jarosik9/openclaw_eval_skill.git
+# Add the parent directory to skills.load.extraDirs in openclaw.json
+```
+
+**Step 2: Ask your OpenClaw agent to run a trigger rate test**
+```
+Evaluate the weather skill's trigger rate using:
+  evals: skills/openclaw-eval-skill/evals/weather/triggers.json
+  skill path: /opt/homebrew/lib/node_modules/openclaw/skills/weather/SKILL.md
+  output: eval-workspace/weather/iter-1/
+Follow USAGE.md Workflow 1.
+```
+
+**Step 3: Check the output**
+```bash
+ls eval-workspace/weather/iter-1/
+# trigger_results.json — trigger rate per query
+# raw/histories/       — full session histories
+```
+
+That's it. If `trigger_results.json` exists with pass/fail per eval, the framework is working.
 
 ---
 
 ## Three Evaluation Modes
 
-| Mode | Tests | Mechanism |
-|------|-------|-----------|
-| **Trigger Rate** | Description trigger accuracy | spawn subagents + `sessions_history` tool_use detection |
-| **Quality Compare** | with skill vs without skill output quality | spawn two groups + grader subagent scoring |
-| **Model Comparison** | Quality + Speed across models | spawn per model + analyze_model_compare.py |
+| Mode | What It Tests | Key Output |
+|------|--------------|------------|
+| **Trigger Rate** | Does the `description` cause the agent to read SKILL.md at the right times? | `trigger_results.json` |
+| **Quality Compare** | Does the skill improve output quality vs no-skill baseline? | `quality_results.json` |
+| **Model Comparison** | How does quality + speed vary across `haiku` / `sonnet` / `opus`? | `model_comparison_report.md` |
+
+---
+
+## Running an Evaluation
+
+All evaluation is **agent-driven**. Ask your OpenClaw agent:
+
+```
+Evaluate the <skill-name> skill. Use:
+  evals: evals/<skill>/quality.json
+  skill path: /path/to/SKILL.md
+  output: eval-workspace/<skill>/iter-1/
+Follow the Quality Compare workflow in USAGE.md.
+```
+
+The agent will:
+1. Spawn subagents (with skill / without skill)
+2. Collect session histories
+3. Run analysis scripts via `exec`
+4. Produce a graded report
 
 ---
 
@@ -70,107 +91,52 @@ See `USAGE.md` for the full agent-driven workflow.
 
 ```
 openclaw-eval-skill/
-├── SKILL.md                       ← Entry point (full execution guide)
-├── README.md                      ← This file
-├── USAGE.md                       ← Agent-driven operation manual
-├── ARCHITECTURE.md                ← Three-dimension framework
+├── SKILL.md          ← Full execution guide (read this first)
+├── README.md         ← This file
+├── USAGE.md          ← Step-by-step agent-driven workflows
+├── CHANGELOG.md      ← Version history
+├── LICENSE
 │
 ├── agents/
-│   ├── grader.md                  ← Checks assertions + behavior anomalies
-│   ├── comparator.md              ← Blind comparison (no assertion bias)
-│   └── analyzer.md                ← Cross-eval pattern analysis
+│   ├── grader.md     ← Assertion checker + behavior anomaly tracker
+│   ├── comparator.md ← Blind A/B judge (no assertion bias)
+│   └── analyzer.md   ← Cross-eval pattern analysis
+│
+├── evals/
+│   ├── example-quality.json    ← Quality Compare examples
+│   ├── example-triggers.json   ← Trigger Rate examples
+│   └── weather/                ← Ready-to-run weather skill evals
+│       ├── quality.json
+│       └── triggers.json
 │
 ├── scripts/
-│   ├── run_orchestrator.py        ← Parallel eval runner (legacy v1)
-│   ├── run_compare.py             ← Transcript extraction (v1)
-│   ├── run_trigger.py             ← Trigger detection (v1)
-│   ├── run_diagnostics.py         ← Description health diagnostics
-│   ├── analyze_triggers.py        ← Trigger analysis from pre-fetched histories (v2)
-│   ├── analyze_quality.py         ← Quality scoring from pre-fetched transcripts (v2)
-│   ├── analyze_model_compare.py   ← Model comparison matrix (v2)
-│   ├── analyze_latency.py         ← Latency p50/p90 from timing files (v2)
-│   └── aggregate_benchmark.py     ← Summarize all eval gradings
+│   ├── analyze_triggers.py     ← Trigger detection from session histories (v2)
+│   ├── analyze_quality.py      ← Quality scoring from transcripts (v2)
+│   ├── analyze_model_compare.py← Model comparison matrix (v2)
+│   ├── analyze_latency.py      ← Latency p50/p90 from timing files (v2)
+│   ├── aggregate_benchmark.py  ← Summarize all gradings
+│   ├── run_diagnostics.py      ← Description health check
+│   ├── run_orchestrator.py     ← Legacy v1 parallel runner
+│   ├── run_compare.py          ← Legacy v1 transcript extractor
+│   └── run_trigger.py          ← Legacy v1 trigger detector
 │
-└── evals/
-    ├── example-quality.json       ← Quality Compare eval examples
-    └── example-triggers.json      ← Trigger Rate query examples
+├── viewer/
+│   ├── generate_review.py      ← Generate HTML review from grading JSON
+│   └── viewer.html             ← Interactive eval result viewer
+│
+└── docs/                       ← Internal design documents
+    ├── ARCHITECTURE.md         ← Three-dimension eval framework
+    ├── SPEC.md                 ← Technical specification
+    ├── PLAN.md                 ← Phase roadmap
+    ├── ANALYSIS.md             ← Component origin analysis
+    └── PHASE-3-*.md            ← Per-phase design docs
 ```
 
 ---
 
-## Mode: Trigger Rate
+## evals.json Schema
 
-Test whether a skill's `description` field causes the agent to read it at the right times.
-
-**Detection method**: `sessions_history(includeTools=True)` scans `tool_use` blocks for `Read` calls on `SKILL.md`. This is ground truth — observed behavior, not inferred intent.
-
-```bash
-python scripts/run_orchestrator.py \
-    --evals evals/example-triggers.json \
-    --skill-path <skill-path>/SKILL.md \
-    --mode trigger \
-    --output-dir workspace/<skill>/iteration-1 \
-    --workers 6
-```
-
-Then run diagnostics on the results:
-```bash
-python scripts/run_diagnostics.py \
-    --evals evals/<skill>/triggers.json \
-    --skill-path <skill-path>/SKILL.md \
-    --trigger-results workspace/<skill>/iteration-1/trigger_results.json \
-    --output-dir workspace/<skill>/iteration-1/diagnostics/
-```
-
----
-
-## Mode: Quality Compare
-
-Compare output quality with vs without skill guidance.
-
-```bash
-python scripts/run_orchestrator.py \
-    --evals evals/example-quality.json \
-    --skill-path <skill-path>/SKILL.md \
-    --mode compare \
-    --output-dir workspace/<skill>/iteration-1 \
-    --workers 6
-```
-
----
-
-## Mode: Model Comparison
-
-Compare Quality + Speed across models for the same skill.
-
-```bash
-python scripts/run_model_compare.py \
-    --evals evals/example-quality.json \
-    --skill-path ./SKILL.md \
-    --models haiku,sonnet,opus \
-    --dimensions quality,speed \
-    --n-runs 5 \
-    --output-dir workspace/model-compare-1 \
-    --workers 6
-```
-
-**Output**:
-```
-## Quality
-| Eval       | haiku | sonnet | opus  |
-|------------|-------|--------|-------|
-| onboarding | 6.2 ✅ | 8.4 ✅ | 9.1 ✅ |
-| transfer   | 3.1 ❌ | 7.9 ✅ | 8.7 ✅ |
-
-## Model Dependency: HIGH ⚠️
-Quality delta (haiku vs opus): 3.5
-Recommendation: Skill requires sonnet+ to function reliably.
-```
-
----
-
-## evals.json Format
-
+**Quality Compare** (`prompt` + `assertions`):
 ```json
 {
   "skill_name": "my-skill",
@@ -179,58 +145,82 @@ Recommendation: Skill requires sonnet+ to function reliably.
       "id": 1,
       "name": "onboarding-fresh",
       "prompt": "Help me set up the wallet",
-      "context": "Clean machine, no prior setup.",
+      "context": "Clean machine, no prior setup. Context for grader only.",
       "expected_output": "Install → configure → verify profile",
       "assertions": [
-        {
-          "id": "a1-1",
-          "description": "Install command executed",
-          "type": "output_contains",
-          "value": "pip install"
-        },
-        {
-          "id": "a1-2",
-          "description": "Profile verified after setup",
-          "type": "output_contains",
-          "value": "profile current",
-          "priority": true
-        }
+        { "id": "a1-1", "description": "Install command executed",
+          "type": "output_contains", "value": "pip install" },
+        { "id": "a1-2", "description": "Profile verified",
+          "type": "output_contains", "value": "profile current", "priority": true }
       ]
     }
   ]
 }
 ```
 
-For trigger tests, use `query` and `expected` fields instead:
+**Trigger Rate** (`query` + `expected`):
 ```json
 {
-  "id": 1,
-  "name": "direct-weather",
-  "query": "What's the weather in Singapore?",
-  "expected": true,
-  "category": "positive"
+  "skill_name": "my-skill",
+  "evals": [
+    { "id": 1, "name": "direct-trigger",
+      "query": "What's the weather in Singapore?",
+      "expected": true, "category": "positive" },
+    { "id": 2, "name": "no-trigger",
+      "query": "What is 2 + 2?",
+      "expected": false, "category": "negative" }
+  ]
 }
+```
+
+See `SKILL.md` for the full list of assertion types.
+
+---
+
+## Issue Priority (grader output)
+
+```
+🔴 P0 Critical  — Core functionality completely broken
+🟠 P1 High      — Significantly impacts usability
+🟡 P2 Medium    — Room for improvement but acceptable
+🟢 P3 Low       — Minor polish
 ```
 
 ---
 
 ## Key Constraints
 
-- **`sandbox="inherit"`** — subagents must inherit the skill registration environment
-- **`cleanup="keep"`** — history must be retained for trigger detection
-- **No claude CLI dependency** — all subagents run via `sessions_spawn`
-- Skill registration: place in a real directory under `skills.load.extraDirs` (symlinks rejected by security check)
+- `sandbox="inherit"` — subagents must inherit the skill registration environment
+- `cleanup="keep"` — history must be retained for trigger detection
+- Skill must be in a real directory under `skills.load.extraDirs` (symlinks rejected by security check)
 
 ---
 
 ## Documentation
 
-| File | Description |
-|------|-------------|
-| `ARCHITECTURE.md` | Three-dimension framework (Quality + Speed + Cost) |
-| `USAGE.md` | Agent-driven operation manual for all 4 workflows |
-| `SKILL.md` | Full execution guide with eval formats and assertion types |
-| `SPEC.md` | Detailed technical specification (historical reference) |
-| `PLAN.md` | Design decisions and phase roadmap |
-| `PHASE-3-*.md` | Per-phase design documents |
+| File | Purpose |
+|------|---------|
+| `SKILL.md` | Full execution guide — eval formats, assertion types, mode details |
+| `USAGE.md` | Agent-driven workflows for all 4 eval modes |
 | `CHANGELOG.md` | Version history |
+| `docs/ARCHITECTURE.md` | Three-dimension framework design |
+| `docs/SPEC.md` | Technical specification (historical reference) |
+
+---
+
+## Result Viewer
+
+After running evals, generate an interactive HTML report:
+
+```bash
+python viewer/generate_review.py eval-workspace/<skill>/iter-1/ --skill-name <skill>
+# Opens a local HTTP server. Visit http://localhost:8080 to browse results.
+```
+
+The viewer shows per-eval grading, behavior anomalies, and assertion pass/fail breakdown.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
