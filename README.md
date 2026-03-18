@@ -38,17 +38,19 @@ python scripts/run_orchestrator.py \
 Two-layer design (v2):
 
 ```
-Layer 1: Agent (main session)
+Layer 1: Agent (main OpenClaw session)
   ├─ Read evals.json
-  ├─ sessions_spawn → subagents
-  ├─ sessions_history → extract data
+  ├─ sessions_spawn → subagents        ← agent does this directly
+  ├─ sessions_history → extract data   ← agent does this directly
   └─ Write files to raw/ directory
 
 Layer 2: Python scripts (run via exec)
-  ├─ Read JSON/txt from raw/
+  ├─ Read JSON/txt from raw/           ← pure data processing
   ├─ Compute statistics
   └─ Generate reports
 ```
+
+**Critical**: the Python scripts cannot call `sessions_spawn` themselves — they are data processors only. The agent in the main session drives the entire workflow.
 
 See `USAGE.md` for the full agent-driven workflow.
 

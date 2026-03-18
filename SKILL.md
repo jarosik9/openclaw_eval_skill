@@ -11,29 +11,71 @@ Evaluation framework for any OpenClaw skill. No claude CLI dependency — all ag
 
 ---
 
-## Quick Start (5 minutes)
+## ⚠️ How This Skill Works (Read First)
 
-```bash
-# Run the full evaluation pipeline (parallel)
-python scripts/run_orchestrator.py \
-    --evals evals/example-quality.json \
-    --skill-path /path/to/SKILL.md \
-    --mode both \
-    --output-dir workspace/iteration-1 \
-    --workers 6
+This skill uses a **two-layer architecture**. Understanding this prevents confusion:
 
-# Output: workspace/iteration-1/
-#   ├── compare_results_raw.json
-#   ├── eval-{id}-{name}/
-#   │   ├── with_skill_full_history.json
-#   │   ├── without_skill_full_history.json
-#   │   └── metadata.json
-#   ├── trigger_rate_results.json
-#   └── [ready for grading]
+```
+Layer 1: The agent (main OpenClaw session) — YOU ARE HERE
+  → Reads evals.json
+  → Calls sessions_spawn to run subagents
+  → Calls sessions_history to collect results
+  → Writes raw data to workspace/
+
+Layer 2: Python analysis scripts (run via exec)
+  → Read the raw data from workspace/
+  → Compute statistics
+  → Generate reports
 ```
 
-**Time**: 5 evals × 2 variants (compare) + 5 evals (trigger) = 15 tasks  
-Sequential: 75s → Parallel (6 workers): 12s (**6x faster**)
+**The Python scripts (`run_orchestrator.py`, `analyze_*.py`) are data processors — they cannot call `sessions_spawn` themselves.** They must be driven by the agent in the main session.
+
+### ✅ Correct usage
+
+The agent (you, in the main session) follows the workflows in `USAGE.md`:
+1. Spawn subagents directly using `sessions_spawn`
+2. Collect results using `sessions_history`
+3. Write raw data to `workspace/{skill}/iter-{n}/raw/`
+4. Then run the analysis scripts via `exec`
+
+### ❌ Will not work
+
+```bash
+# Running scripts from a sub-agent context — WILL FAIL
+# sessions_spawn is not available in isolated subagent environments
+python scripts/run_orchestrator.py --evals ...
+```
+
+**→ See `USAGE.md` for the complete step-by-step agent-driven workflow.**
+
+---
+
+## Quick Start (5 minutes)
+
+### Step 1: Spawn subagents (agent does this directly)
+
+```python
+# For each eval query, spawn a subagent
+session_key = sessions_spawn(
+    task=f"Read {skill_path} for guidance. Then: {prompt}",
+    sandbox="inherit",
+    cleanup="keep",
+    mode="run",
+    label=f"eval-{eval_id}"
+)
+# Wait for all to complete (watch for announce signals)
+```
+
+### Step 2: Run analysis script (after collecting raw data)
+
+```bash
+python scripts/analyze_triggers.py \
+    --evals evals/example-triggers.json \
+    --histories workspace/my-skill/iter-1/raw/histories/ \
+    --output workspace/my-skill/iter-1/trigger_results.json
+```
+
+**See `USAGE.md` for the complete workflow** — including how to spawn subagents, collect histories, and run each analysis script in order.
 
 ---
 

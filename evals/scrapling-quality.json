@@ -1,0 +1,176 @@
+{
+  "name": "scrapling-quality",
+  "version": "1.0",
+  "description": "Quality comparison: with scrapling skill vs without. Tests correct tool selection, error handling, and integration.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "cloudflare-protection-intro",
+      "prompt": "我需要爬一个受Cloudflare保护的网站。我应该用什么工具？web_fetch失败了。",
+      "context": "User encountered 403 error from web_fetch on a Cloudflare-protected website.",
+      "expected_output": "Should identify scrapling as the right tool for Cloudflare anti-crawl sites, explain why web_fetch fails, show basic scrape_content usage.",
+      "assertions": [
+        {
+          "id": "a1",
+          "description": "Mentions scrapling or appropriate tool name",
+          "type": "conversation_contains_any",
+          "values": ["scrapling", "Scrapling", "反爬工具", "抓取工具"]
+        },
+        {
+          "id": "a2",
+          "description": "Explains web_fetch limitation (403/Cloudflare)",
+          "type": "conversation_contains_any",
+          "values": ["web_fetch", "403", "Cloudflare", "反爬"]
+        },
+        {
+          "id": "a3",
+          "description": "Shows code example or usage",
+          "type": "conversation_contains_any",
+          "values": ["scrape_content", "from scrapling", "import", "示例"]
+        },
+        {
+          "id": "a4",
+          "description": "[PRIORITY] Mentions Cloudflare support",
+          "type": "conversation_contains",
+          "value": "Cloudflare",
+          "priority": true
+        }
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": 2,
+      "name": "wechat-article-extraction",
+      "prompt": "我想提取一篇微信公众号的文章内容。怎么做？",
+      "context": "User wants to extract content from a WeChat Official Account (微信公众号) article.",
+      "expected_output": "Should recognize scrapling does NOT support WeChat. Warn about limitation. Suggest alternatives (Jina Reader, manual copy, etc).",
+      "assertions": [
+        {
+          "id": "a1",
+          "description": "Correctly identifies WeChat limitation",
+          "type": "conversation_contains_any",
+          "values": ["不支持微信", "不能", "不工作", "不行", "⚠️", "warning"]
+        },
+        {
+          "id": "a2",
+          "description": "Mentions alternative tool",
+          "type": "conversation_contains_any",
+          "values": ["Jina", "Jina Reader", "手动", "manual"]
+        },
+        {
+          "id": "a3",
+          "description": "[PRIORITY] References scrapling documentation about WeChat",
+          "type": "conversation_contains_any",
+          "values": ["SKILL.md", "文档", "文档说", "doc"],
+          "priority": true
+        }
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": 3,
+      "name": "chinese-tech-blog-extraction",
+      "prompt": "我想从国内技术博客爬内容，这些网站都有反爬保护。有什么工具适合这个场景？",
+      "context": "User wants to extract content from domestic Chinese tech blogs with anti-crawl protection.",
+      "expected_output": "Should identify scrapling as suitable tool. Explain why it's good for Chinese sites. Show scrape_with_selector or scrape_content usage. Mention max_chars to control output size.",
+      "assertions": [
+        {
+          "id": "a1",
+          "description": "Mentions scrapling suitability for Chinese sites",
+          "type": "conversation_contains_any",
+          "values": ["scrapling", "适合", "suitable", "国内", "技术博客"]
+        },
+        {
+          "id": "a2",
+          "description": "Explains anti-crawl handling",
+          "type": "conversation_contains_any",
+          "values": ["反爬", "anti-crawl", "自动", "自动选择"]
+        },
+        {
+          "id": "a3",
+          "description": "Shows code example with proper parameters",
+          "type": "conversation_contains_any",
+          "values": ["max_chars", "timeout", "selector", "scrape_content"]
+        },
+        {
+          "id": "a4",
+          "description": "[PRIORITY] Mentions performance (speed/tokens)",
+          "type": "conversation_contains_any",
+          "values": ["快", "快速", "token", "高效", "性能"],
+          "priority": true
+        }
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": 4,
+      "name": "error-handling-403",
+      "prompt": "我试着爬一个网页，但得到403错误。我用了什么工具都失败了。请帮我诊断。",
+      "context": "User has tried multiple approaches and still gets 403 Forbidden response.",
+      "expected_output": "Should suggest scrapling with stealthy mode (scrape_with_stealthy). Explain when to use which variant. Mention fallback to proxy or manual copy if all else fails.",
+      "assertions": [
+        {
+          "id": "a1",
+          "description": "Recognizes 403 as anti-crawl, not a general error",
+          "type": "conversation_contains_any",
+          "values": ["403", "反爬", "anti-crawl", "protection"]
+        },
+        {
+          "id": "a2",
+          "description": "Suggests scrape_with_stealthy for high-strength anti-crawl",
+          "type": "conversation_contains_any",
+          "values": ["stealthy", "StealthyFetcher", "浏览器指纹"]
+        },
+        {
+          "id": "a3",
+          "description": "Mentions alternative if scrapling fails",
+          "type": "conversation_contains_any",
+          "values": ["代理", "proxy", "手动", "manual", "Jina"]
+        },
+        {
+          "id": "a4",
+          "description": "[PRIORITY] Provides actionable next steps",
+          "type": "conversation_contains_any",
+          "values": ["try", "尝试", "下一步", "next", "步骤"],
+          "priority": true
+        }
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": 5,
+      "name": "integration-with-industry-analysis",
+      "prompt": "我在做行业动态监控。想自动爬取竞品博客和新闻网站的内容，然后用LLM分析。怎样集成到我的工作流里？",
+      "context": "User is building an industry monitoring system that combines web scraping + LLM analysis.",
+      "expected_output": "Should explain scrapling as the scraping layer. Show integration with industry-analysis workflow. Discuss error handling, caching, rate limiting, and passing results to LLM for analysis.",
+      "assertions": [
+        {
+          "id": "a1",
+          "description": "Mentions scrapling for scraping layer",
+          "type": "conversation_contains",
+          "value": "scrapling"
+        },
+        {
+          "id": "a2",
+          "description": "Shows workflow integration (scraping → analysis)",
+          "type": "conversation_contains_any",
+          "values": ["工作流", "workflow", "集成", "pipeline", "流程"]
+        },
+        {
+          "id": "a3",
+          "description": "Discusses error handling or retry strategy",
+          "type": "conversation_contains_any",
+          "values": ["错误", "error", "重试", "retry", "fail"]
+        },
+        {
+          "id": "a4",
+          "description": "[PRIORITY] Shows code or concrete example",
+          "type": "conversation_contains_any",
+          "values": ["代码", "code", "示例", "example", "for url"],
+          "priority": true
+        }
+      ],
+      "timeout_seconds": 180
+    }
+  ]
+}
