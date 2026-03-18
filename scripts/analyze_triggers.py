@@ -46,7 +46,10 @@ def check_skill_triggered(messages: list, skill_path: str) -> bool:
                     args = block.get("arguments", {})
                     if tool_name in ("read", "Read"):
                         path_arg = args.get("file_path", "") or args.get("path", "")
-                        if skill_filename in path_arg or skill_dir in path_arg:
+                        # Check filename match, and directory match only if non-empty
+                        if skill_filename in path_arg:
+                            return True
+                        if skill_dir and skill_dir in path_arg:
                             return True
                 # Also check text for exec with wttr.in (weather-specific)
                 if block.get("type") == "text":

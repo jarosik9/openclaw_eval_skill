@@ -107,6 +107,40 @@ class TestCheckSkillTriggered:
         ]
         assert check_skill_triggered(messages, "/path/to/weather/SKILL.md") is True
 
+    def test_no_false_positive_on_empty_skill_dir(self):
+        """Should NOT trigger when skill_path has no directory (empty parent)."""
+        messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "toolCall",
+                        "name": "Read",
+                        "arguments": {"path": "/some/random/file.md"}
+                    }
+                ]
+            }
+        ]
+        # skill_path = "SKILL.md" -> parent.name = "" (empty string)
+        # Empty string would match any path without this fix
+        assert check_skill_triggered(messages, "SKILL.md") is False
+
+    def test_triggers_on_filename_only_skill_path(self):
+        """Should trigger when skill_path has no directory but filename matches."""
+        messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "toolCall",
+                        "name": "Read",
+                        "arguments": {"path": "/any/path/to/SKILL.md"}
+                    }
+                ]
+            }
+        ]
+        assert check_skill_triggered(messages, "SKILL.md") is True
+
 
 class TestAnalyzeTriggers:
     """Integration tests for the full analysis pipeline."""
