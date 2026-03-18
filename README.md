@@ -124,12 +124,10 @@ openclaw-eval-skill/
 │   ├── generate_review.py      ← Generate HTML review from grading JSON
 │   └── viewer.html             ← Interactive eval result viewer
 │
-└── docs/                       ← Internal design documents
-    ├── ARCHITECTURE.md         ← Three-dimension eval framework
-    ├── SPEC.md                 ← Technical specification
-    ├── PLAN.md                 ← Phase roadmap
-    ├── ANALYSIS.md             ← Component origin analysis
-    └── PHASE-3-*.md            ← Per-phase design docs
+├── tests/                      ← Unit tests (pytest)
+│
+└── docs/
+    └── ARCHITECTURE.md         ← Three-dimension eval framework
 ```
 
 ---
@@ -204,7 +202,6 @@ See `SKILL.md` for the full list of assertion types.
 | `USAGE.md` | Agent-driven workflows for all 4 eval modes |
 | `CHANGELOG.md` | Version history |
 | `docs/ARCHITECTURE.md` | Three-dimension framework design |
-| `docs/SPEC.md` | Technical specification (historical reference) |
 
 ---
 
