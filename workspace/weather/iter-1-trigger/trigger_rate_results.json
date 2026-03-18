@@ -1,0 +1,103 @@
+{
+  "skill_name": "weather",
+  "timestamp": "2026-03-18T22:07:00+08:00",
+  "trigger_rate": 0.8,
+  "recall": 0.857,
+  "specificity": 0.75,
+  "accuracy": 0.8,
+  "total_queries": 10,
+  "triggered_count": 7,
+  "results": [
+    {
+      "id": 1,
+      "query": "What's the current weather in Singapore?",
+      "expected": true,
+      "triggered": true,
+      "correct": true,
+      "category": "positive",
+      "evidence": "read SKILL.md + exec curl wttr.in/Singapore"
+    },
+    {
+      "id": 2,
+      "query": "今天天气怎么样",
+      "expected": true,
+      "triggered": true,
+      "correct": true,
+      "category": "positive",
+      "evidence": "read SKILL.md + exec curl wttr.in"
+    },
+    {
+      "id": 3,
+      "query": "Will it rain tomorrow in London?",
+      "expected": true,
+      "triggered": true,
+      "correct": true,
+      "category": "positive",
+      "evidence": "read SKILL.md + exec curl wttr.in/London"
+    },
+    {
+      "id": 4,
+      "query": "Temperature in Tokyo right now",
+      "expected": true,
+      "triggered": true,
+      "correct": true,
+      "category": "positive",
+      "evidence": "read SKILL.md + exec curl wttr.in/Tokyo"
+    },
+    {
+      "id": 5,
+      "query": "I'm flying to NYC next week, what should I pack?",
+      "expected": true,
+      "triggered": true,
+      "correct": true,
+      "category": "positive",
+      "evidence": "read SKILL.md + exec curl wttr.in/NYC (checked forecast before packing advice)"
+    },
+    {
+      "id": 6,
+      "query": "What's the stock price of NVDA?",
+      "expected": false,
+      "triggered": false,
+      "correct": true,
+      "category": "negative",
+      "evidence": "read options-data/SKILL.md (not weather) — correctly rejected weather skill"
+    },
+    {
+      "id": 7,
+      "query": "Help me debug my Python code",
+      "expected": false,
+      "triggered": false,
+      "correct": true,
+      "category": "negative",
+      "evidence": "answered directly, no skill read"
+    },
+    {
+      "id": 8,
+      "query": "What was the average temperature in Paris in 1990?",
+      "expected": false,
+      "triggered": false,
+      "correct": true,
+      "note": "Model read description in memory and knew NOT for historical data — answered from knowledge",
+      "category": "negative"
+    },
+    {
+      "id": 9,
+      "query": "How is climate change affecting rainfall patterns?",
+      "expected": false,
+      "triggered": false,
+      "correct": true,
+      "category": "edge-case",
+      "evidence": "answered directly — climate analysis, not weather"
+    },
+    {
+      "id": 10,
+      "query": "today got rain or not?",
+      "expected": true,
+      "triggered": true,
+      "correct": true,
+      "category": "edge-case",
+      "evidence": "read SKILL.md + exec curl wttr.in/Singapore — Singlish handled correctly"
+    }
+  ],
+  "notes": "Eval 6 (NVDA): model correctly did NOT read weather SKILL.md, but did read options-data skill instead — correct behavior, counted as non-triggered (expected=false)."
+}
