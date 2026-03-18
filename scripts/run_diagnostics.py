@@ -341,7 +341,12 @@ def estimate_improvement(failures: dict) -> dict:
     """
     total_queries = failures.get("total_fixable", 0) + len(failures.get("low", []))
     if total_queries == 0:
-        return {"estimated_recall_gain": 0, "note": "No data"}
+        return {
+            "estimated_recall_gain_pp": 0,
+            "estimated_recall_gain": 0,
+            "note": "No failures found — description may already be healthy.",
+            "warning": "No fixes needed based on current eval set."
+        }
 
     # Assume each fixable critical = +5pp, high = +3pp, medium = +1pp
     gain_pp = (
@@ -354,6 +359,7 @@ def estimate_improvement(failures: dict) -> dict:
         "estimated_recall_gain_pp": min(gain_pp, 30),  # cap at 30pp
         "note": "Rough estimate. Actual gain depends on description changes.",
         "warning": "Fixing all issues may reduce specificity. Review each fix carefully.",
+        "estimated_recall_gain": min(gain_pp, 30),     # alias
     }
 
 
@@ -465,7 +471,7 @@ def generate_markdown_report(
         "",
         "## Expected Improvement (Rough Estimate)",
         "",
-        f"Fixing critical + high issues: ~+{improvement['estimated_recall_gain_pp']}pp recall",
+        f"Fixing critical + high issues: ~+{improvement.get('estimated_recall_gain_pp', improvement.get('estimated_recall_gain', 0))}pp recall",
         "",
         f"> ⚠️  {improvement['warning']}",
         "",
