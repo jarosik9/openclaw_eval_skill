@@ -82,31 +82,6 @@ class TestCheckSkillTriggered:
         ]
         assert check_skill_triggered(messages, "weather/SKILL.md") is True
 
-    def test_triggered_weather_specific_wttr(self):
-        """Should detect weather skill trigger via wttr.in usage."""
-        messages = [
-            {
-                "role": "assistant",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "curl wttr.in/Singapore"
-                    }
-                ]
-            }
-        ]
-        assert check_skill_triggered(messages, "/path/to/weather/SKILL.md") is True
-
-    def test_string_content_wttr(self):
-        """Should handle string content (not list)."""
-        messages = [
-            {
-                "role": "assistant",
-                "content": "Running curl wttr.in/London for weather"
-            }
-        ]
-        assert check_skill_triggered(messages, "/path/to/weather/SKILL.md") is True
-
     def test_no_false_positive_on_empty_skill_dir(self):
         """Should NOT trigger when skill_path has no directory (empty parent)."""
         messages = [

@@ -51,14 +51,6 @@ def check_skill_triggered(messages: list, skill_path: str) -> bool:
                             return True
                         if skill_dir and skill_dir in path_arg:
                             return True
-                # Also check text for exec with wttr.in (weather-specific)
-                if block.get("type") == "text":
-                    text = block.get("text", "")
-                    if "wttr.in" in text:
-                        return True
-        elif isinstance(content, str):
-            if "wttr.in" in content:
-                return True
 
     return False
 
