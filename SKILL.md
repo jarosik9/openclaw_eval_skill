@@ -1,5 +1,5 @@
 ---
-name: openclaw-eval-skill
+name: skill-eval
 description: "Skill evaluation framework. Use when: testing trigger rate, quality compare (with/without skill), or model comparison. Runs via sessions_spawn + sessions_history. Trigger words: evaluate skill, benchmark, trigger rate, A/B compare. NOT for: debugging conversations, general testing unrelated to skill evaluation."
 metadata: { "openclaw": { "emoji": "🔬" } }
 ---
@@ -9,6 +9,22 @@ metadata: { "openclaw": { "emoji": "🔬" } }
 Evaluation framework for any OpenClaw skill. No claude CLI dependency — all agent execution runs through `sessions_spawn` + `sessions_history`.
 
 **Scope**: Works with CLI tool skills, conversational skills, and API integration skills.
+
+---
+
+## Runtime Actions Disclosure
+
+This skill performs the following actions during evaluation:
+
+| Action | Purpose | When |
+|--------|---------|------|
+| Read `~/.openclaw/openclaw.json` | Find skill directories (extraDirs) | Path resolution |
+| Write to `eval-workspace/` | Store evaluation results | Every eval run |
+| Call `sessions_spawn` | Run test queries in isolated sessions | Trigger & quality tests |
+| Call `sessions_history` | Collect conversation data for analysis | After each spawn |
+| Persist `cleanup="keep"` sessions | Required for trigger detection | Trigger rate tests |
+
+**NOT performed automatically**: Gateway restart, config modification, skill installation. These require manual user action (see "Bundled Test Skill" section).
 
 ---
 
@@ -47,26 +63,24 @@ Use the JSON output to fill in paths for the workflows below.
 
 A test skill (`test-skills/fake-tool/`) is included for validating trigger rate detection. It simulates a fictional "Zephyr API" that models cannot know from training.
 
-**Auto-setup**: If `resolve_paths.py fake-tool` returns "not found", the agent should:
+**Manual setup required**: The agent will NOT automatically install fake-tool or restart your gateway. If you want to test with fake-tool:
 
-1. **Detect extraDirs** from `~/.openclaw/openclaw.json`:
-   ```bash
-   python3 -c "import json; c=json.load(open('$HOME/.openclaw/openclaw.json')); print(c.get('skills',{}).get('load',{}).get('extraDirs',['~/.openclaw/workspace/skills'])[0])"
-   ```
-
-2. **Copy fake-tool** to the first extraDir:
+1. **Copy fake-tool** to your skills directory:
    ```bash
    cp -r test-skills/fake-tool ~/.openclaw/workspace/skills/
    ```
 
-3. **Restart gateway** using the gateway tool:
-   ```
-   gateway(action="restart", reason="Register fake-tool skill for eval")
+2. **Restart OpenClaw gateway** (from terminal):
+   ```bash
+   openclaw gateway restart
    ```
 
-4. **Wait** ~3 seconds for restart, then re-run `resolve_paths.py fake-tool` to confirm registration.
+3. **Verify registration**:
+   ```bash
+   python scripts/resolve_paths.py fake-tool
+   ```
 
-This auto-setup ensures `evaluate fake-tool` works without manual intervention.
+If step 3 returns a valid path, fake-tool is ready. If "not found", check that your `~/.openclaw/openclaw.json` includes the skills directory in `skills.load.extraDirs`.
 
 ---
 
