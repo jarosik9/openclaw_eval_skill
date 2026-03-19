@@ -130,31 +130,59 @@ def analyze_triggers(
     true_positives = [r for r in positives if r["triggered"]]
     true_negatives = [r for r in negatives if not r["triggered"]]
 
-    recall = len(true_positives) / len(positives) if positives else 0
-    specificity = len(true_negatives) / len(negatives) if negatives else 0
+    # Calculate all metrics
+    false_positives = [r for r in negatives if r["triggered"]]
+    false_negatives = [r for r in positives if not r["triggered"]]
+    
+    tp = len(true_positives)
+    tn = len(true_negatives)
+    fp = len(false_positives)
+    fn = len(false_negatives)
+    
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
     accuracy = correct_count / total
 
-    # Description diagnosis: analyze failed positive cases
-    false_negatives = [r for r in positives if not r["triggered"]]
-    diagnosis = []
-    if false_negatives:
-        for r in false_negatives:
-            diagnosis.append({
-                "eval_id": r["id"],
-                "query": r["query"],
-                "category": r.get("category", "unknown"),
-                "diagnosis": "Positive query did not trigger skill read. Description may lack keywords to match this query pattern.",
-            })
+    # Description diagnosis: analyze failures
+    diagnosis = {
+        "false_negatives": [],  # Should trigger but didn't
+        "false_positives": [],  # Should NOT trigger but did
+    }
+    
+    for r in false_negatives:
+        diagnosis["false_negatives"].append({
+            "eval_id": r["id"],
+            "query": r["query"],
+            "issue": "Should trigger but didn't. Description may lack keywords for this query pattern.",
+        })
+    
+    for r in false_positives:
+        diagnosis["false_positives"].append({
+            "eval_id": r["id"],
+            "query": r["query"],
+            "issue": "Should NOT trigger but did. Description may be too broad or contain misleading keywords.",
+        })
 
     output = {
         "skill_name": skill_name,
         "skill_path": skill_path,
         "timestamp": datetime.now().isoformat(),
-        "trigger_rate": round(accuracy, 3),
-        "recall": round(recall, 3),
-        "specificity": round(specificity, 3),
-        "accuracy": round(accuracy, 3),
-        "total_queries": total,
+        "metrics": {
+            "accuracy": round(accuracy, 3),
+            "recall": round(recall, 3),
+            "specificity": round(specificity, 3),
+            "precision": round(precision, 3),
+            "f1": round(f1, 3),
+        },
+        "counts": {
+            "total": total,
+            "true_positives": tp,
+            "true_negatives": tn,
+            "false_positives": fp,
+            "false_negatives": fn,
+        },
         "triggered_count": sum(1 for r in results if r["triggered"]),
         "missing_histories": missing,
         "results": results,
@@ -169,23 +197,30 @@ def analyze_triggers(
     print()
     print(f"=== Trigger Results ===")
     print(f"Accuracy:    {accuracy:.0%} ({correct_count}/{total})")
-    print(f"Recall:      {recall:.0%} ({len(true_positives)}/{len(positives)})")
-    print(f"Specificity: {specificity:.0%} ({len(true_negatives)}/{len(negatives)})")
+    print(f"Precision:   {precision:.0%} ({tp}/{tp + fp})" if (tp + fp) > 0 else "Precision:   N/A (no triggers)")
+    print(f"Recall:      {recall:.0%} ({tp}/{tp + fn})" if (tp + fn) > 0 else "Recall:      N/A (no positives)")
+    print(f"Specificity: {specificity:.0%} ({tn}/{tn + fp})" if (tn + fp) > 0 else "Specificity: N/A (no negatives)")
+    print(f"F1 Score:    {f1:.2f}")
     if missing:
         print(f"⚠️  Missing histories: {missing}")
 
     # Print description diagnosis
-    if diagnosis:
+    fn_list = diagnosis["false_negatives"]
+    fp_list = diagnosis["false_positives"]
+    
+    if fn_list:
         print()
-        print(f"=== Description Diagnosis ({len(diagnosis)} issues) ===")
-        print("Positive queries that did NOT trigger skill read:")
-        print("→ These suggest gaps in skill description coverage.")
-        print()
-        for d in diagnosis:
+        print(f"=== False Negatives ({len(fn_list)}) ===")
+        print("Should trigger but didn't → description lacks coverage:")
+        for d in fn_list:
             print(f"  [{d['eval_id']}] \"{d['query']}\"")
+    
+    if fp_list:
         print()
-        print("Recommendation: Update skill description to include keywords")
-        print("that would help the model associate these queries with the skill.")
+        print(f"=== False Positives ({len(fp_list)}) ===")
+        print("Should NOT trigger but did → description too broad:")
+        for d in fp_list:
+            print(f"  [{d['eval_id']}] \"{d['query']}\"")
 
     print()
     print(f"✅ Saved to {output_file}")

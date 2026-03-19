@@ -225,9 +225,14 @@ The viewer shows per-eval grading, behavior anomalies, and assertion pass/fail b
 
 ## Roadmap
 
+### v1.1 (Next)
 - [ ] Screenshot/GIF of trigger_results.json output
 - [ ] Additional eval templates (API integration, conversational skills)
 - [ ] Capability-based trigger detection for model-known skills
+
+### v1.2 (Planned)
+- [ ] **Cross-skill Conflict Detection** — detect when two skill descriptions overlap and may compete for the same queries
+- [ ] **Error Recovery Testing** — measure how well agents recover when skill commands fail
 
 ---
 

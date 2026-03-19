@@ -180,16 +180,22 @@ class TestAnalyzeTriggers:
 
         # Check results
         assert result["skill_name"] == "test-skill"
-        assert result["accuracy"] == 1.0  # Both correct
-        assert result["recall"] == 1.0  # 1/1 positive triggered
-        assert result["specificity"] == 1.0  # 1/1 negative not triggered
-        assert result["total_queries"] == 2
+        assert result["metrics"]["accuracy"] == 1.0  # Both correct
+        assert result["metrics"]["recall"] == 1.0  # 1/1 positive triggered
+        assert result["metrics"]["specificity"] == 1.0  # 1/1 negative not triggered
+        assert result["metrics"]["precision"] == 1.0  # 1/1 trigger was correct
+        assert result["metrics"]["f1"] == 1.0  # Perfect score
+        assert result["counts"]["total"] == 2
+        assert result["counts"]["true_positives"] == 1
+        assert result["counts"]["true_negatives"] == 1
+        assert result["counts"]["false_positives"] == 0
+        assert result["counts"]["false_negatives"] == 0
         assert len(result["results"]) == 2
 
         # Check output file was written
         assert output_file.exists()
         saved = json.loads(output_file.read_text())
-        assert saved["accuracy"] == 1.0
+        assert saved["metrics"]["accuracy"] == 1.0
 
     def test_missing_history_file(self, tmp_path):
         """Should handle missing history files gracefully."""
@@ -218,5 +224,110 @@ class TestAnalyzeTriggers:
             output_file=str(output_file),
         )
 
-        assert result["total_queries"] == 1  # Only 1 processed
+        assert result["counts"]["total"] == 1  # Only 1 processed
         assert 999 in result["missing_histories"]
+
+    def test_false_positive_detection(self, tmp_path):
+        """Should detect and report false positives (triggered when shouldn't)."""
+        evals_data = {
+            "skill_name": "test-skill",
+            "skill_path": "/test/SKILL.md",
+            "evals": [
+                {"id": 1, "query": "unrelated query", "expected": False, "category": "negative"},
+            ]
+        }
+        evals_file = tmp_path / "evals.json"
+        evals_file.write_text(json.dumps(evals_data))
+
+        histories_dir = tmp_path / "histories"
+        histories_dir.mkdir()
+
+        # History: triggered but shouldn't have (false positive)
+        hist1 = {
+            "eval_id": 1,
+            "query": "unrelated query",
+            "expected": False,
+            "messages": [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "toolCall", "name": "Read", "arguments": {"path": "/test/SKILL.md"}}
+                    ]
+                }
+            ]
+        }
+        (histories_dir / "eval-1.json").write_text(json.dumps(hist1))
+
+        output_file = tmp_path / "results.json"
+
+        result = analyze_triggers(
+            evals_file=str(evals_file),
+            histories_dir=str(histories_dir),
+            output_file=str(output_file),
+        )
+
+        # Check false positive detected
+        assert result["counts"]["false_positives"] == 1
+        assert result["metrics"]["specificity"] == 0.0
+        assert len(result["description_diagnosis"]["false_positives"]) == 1
+        assert result["description_diagnosis"]["false_positives"][0]["eval_id"] == 1
+
+    def test_precision_and_f1(self, tmp_path):
+        """Should correctly calculate precision and F1."""
+        evals_data = {
+            "skill_name": "test-skill",
+            "skill_path": "/test/SKILL.md",
+            "evals": [
+                {"id": 1, "query": "pos1", "expected": True, "category": "positive"},
+                {"id": 2, "query": "pos2", "expected": True, "category": "positive"},
+                {"id": 3, "query": "neg1", "expected": False, "category": "negative"},
+            ]
+        }
+        evals_file = tmp_path / "evals.json"
+        evals_file.write_text(json.dumps(evals_data))
+
+        histories_dir = tmp_path / "histories"
+        histories_dir.mkdir()
+
+        # 1: True positive (triggered, should trigger)
+        (histories_dir / "eval-1.json").write_text(json.dumps({
+            "eval_id": 1, "messages": [
+                {"role": "assistant", "content": [
+                    {"type": "toolCall", "name": "Read", "arguments": {"path": "/test/SKILL.md"}}
+                ]}
+            ]
+        }))
+        
+        # 2: False negative (not triggered, should trigger)
+        (histories_dir / "eval-2.json").write_text(json.dumps({
+            "eval_id": 2, "messages": []
+        }))
+        
+        # 3: False positive (triggered, should not trigger)
+        (histories_dir / "eval-3.json").write_text(json.dumps({
+            "eval_id": 3, "messages": [
+                {"role": "assistant", "content": [
+                    {"type": "toolCall", "name": "Read", "arguments": {"path": "/test/SKILL.md"}}
+                ]}
+            ]
+        }))
+
+        output_file = tmp_path / "results.json"
+        result = analyze_triggers(
+            evals_file=str(evals_file),
+            histories_dir=str(histories_dir),
+            output_file=str(output_file),
+        )
+
+        # TP=1, FP=1, FN=1, TN=0
+        assert result["counts"]["true_positives"] == 1
+        assert result["counts"]["false_positives"] == 1
+        assert result["counts"]["false_negatives"] == 1
+        assert result["counts"]["true_negatives"] == 0
+        
+        # Precision = TP/(TP+FP) = 1/2 = 0.5
+        assert result["metrics"]["precision"] == 0.5
+        # Recall = TP/(TP+FN) = 1/2 = 0.5
+        assert result["metrics"]["recall"] == 0.5
+        # F1 = 2*P*R/(P+R) = 2*0.5*0.5/1 = 0.5
+        assert result["metrics"]["f1"] == 0.5

@@ -70,6 +70,32 @@ This auto-setup ensures `evaluate fake-tool` works without manual intervention.
 
 ---
 
+## Evaluation Scenarios
+
+### Tier 1: Core (Always Run)
+
+| Scenario | What It Tests | Output |
+|----------|---------------|--------|
+| **Trigger Rate** | Does description trigger SKILL.md reads at the right times? Includes positive (should trigger) AND negative (should NOT trigger) cases. | recall, specificity, precision, F1 |
+| **Quality Compare** | Does skill improve output vs no-skill baseline? | quality_score, assertion pass rate |
+| **Description Diagnosis** | Why did triggers fail? Analyzes both false negatives AND false positives. | gap analysis, recommendations |
+
+### Tier 2: Optional (Run When Needed)
+
+| Scenario | What It Tests | When to Use |
+|----------|---------------|-------------|
+| **Model Comparison** | Quality + speed across haiku/sonnet/opus | Before deployment: which model is enough? |
+| **Efficiency Profile** | Response time + retry patterns | When skill feels slow: is agent walking wrong paths? |
+
+### Tier 3: Future (Roadmap)
+
+| Scenario | What It Tests | Status |
+|----------|---------------|--------|
+| **Cross-skill Conflict** | Two skills with overlapping descriptions | Planned |
+| **Error Recovery** | Does agent recover when CLI fails? | Planned |
+
+---
+
 ## How This Skill Works
 
 **Two-layer architecture**:
