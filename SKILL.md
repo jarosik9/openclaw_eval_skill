@@ -43,6 +43,33 @@ Use the JSON output to fill in paths for the workflows below.
 
 ---
 
+## Bundled Test Skill: fake-tool
+
+A test skill (`test-skills/fake-tool/`) is included for validating trigger rate detection. It simulates a fictional "Zephyr API" that models cannot know from training.
+
+**Auto-setup**: If `resolve_paths.py fake-tool` returns "not found", the agent should:
+
+1. **Detect extraDirs** from `~/.openclaw/openclaw.json`:
+   ```bash
+   python3 -c "import json; c=json.load(open('$HOME/.openclaw/openclaw.json')); print(c.get('skills',{}).get('load',{}).get('extraDirs',['~/.openclaw/workspace/skills'])[0])"
+   ```
+
+2. **Copy fake-tool** to the first extraDir:
+   ```bash
+   cp -r test-skills/fake-tool ~/.openclaw/workspace/skills/
+   ```
+
+3. **Restart gateway** using the gateway tool:
+   ```
+   gateway(action="restart", reason="Register fake-tool skill for eval")
+   ```
+
+4. **Wait** ~3 seconds for restart, then re-run `resolve_paths.py fake-tool` to confirm registration.
+
+This auto-setup ensures `evaluate fake-tool` works without manual intervention.
+
+---
+
 ## How This Skill Works
 
 **Two-layer architecture**:
