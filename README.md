@@ -97,7 +97,7 @@ openclaw-eval-skill/
 │   └── fake-tool/              ← Test skill for trigger validation
 │
 ├── templates/
-│   └── cli-wrapper/            ← Eval templates for CLI tool skills
+│   └── cli-wrapper/            ← Eval templates for CLI tool skills (more coming)
 │
 ├── scripts/
 │   ├── analyze_triggers.py     ← Trigger detection from session histories
@@ -218,6 +218,16 @@ python viewer/generate_review.py eval-workspace/<skill>/iter-1/ --skill-name <sk
 ```
 
 The viewer shows per-eval grading, behavior anomalies, and assertion pass/fail breakdown.
+
+---
+
+---
+
+## Roadmap
+
+- [ ] Screenshot/GIF of trigger_results.json output
+- [ ] Additional eval templates (API integration, conversational skills)
+- [ ] Capability-based trigger detection for model-known skills
 
 ---
 
